@@ -13,13 +13,14 @@
 - **後端 (Backend)**: FastAPI, SQLAlchemy 2.0, PostgreSQL, Redis
 - **基礎設施 (Infrastructure)**: Docker, Nginx, Cloudflare Tunnel
 
+
 ## 📂 開發文件導覽 (Development Docs)
 在開始實作前，已完成完整的架構規劃，文件存放於 `/docs`：
-1. [產品需求文件 (PRD)](./docs/PRD_v1.1.md)
-2. [技術架構表 (Tech Stack)](./docs/Tech_Stack_v1.0.md)
-3. [資料庫實體關係圖 (ERD)](./docs/ERD_v1.1.md)
-4. [API 規格書 (API Spec)](./docs/API_Spec_v1.3.md)
-5. [UI 邏輯與組件結構 (UI Logic)](./docs/UI_Logic_v1.0.md)
+1. [產品需求文件 (PRD)](./docs/PRD.md)
+2. [技術架構表 (Tech Stack)](./docs/Tech_Stack.md)
+3. [資料庫實體關係圖 (ERD)](./docs/ERD.md)
+4. [API 規格書 (API Spec)](./docs/API_Spec.md)
+5. [UI 邏輯與組件結構 (UI Logic)](./docs/UI_Logic.md)
 
 ## 📈 專案開發進度 (Development Roadmap)
 
