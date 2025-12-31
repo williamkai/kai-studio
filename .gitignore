@@ -1,0 +1,17 @@
+# Python (Backend)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+.env
+
+# Node.js (Frontend)
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Database & OS
+.DS_Store
+postgres_data/
