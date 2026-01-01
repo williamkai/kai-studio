@@ -1,4 +1,4 @@
-# 🛠️ Tech Stack 技術架構表 (V1.1)
+# 🛠️ Tech Stack 技術架構表 (V1.2)
 
 ## 1. 前端開發 (Frontend)
 * **核心框架**：`Vue 3 (Composition API)`
@@ -8,51 +8,50 @@
 * **路由管理**：`Vue Router` (處理個人頁面路徑、後台路徑等)。
 * **UI 框架與樣式**：
     * **Tailwind CSS**：負責主要的響應式佈局 (Grid/Flex) 與自定義樣式。
-    * **Element Plus**：負責複雜組件，如：後台管理表格、彈窗 (Modal)、日期選擇器、下拉選單。
-* **文章編輯器**：`Editor.js`
-    * 輸出格式為結構化 JSON，方便後端儲存、搜尋與未來移動端 (App) 擴展。
+    * **Element Plus**：負責複雜組件，如：後台管理表格、彈窗 (Modal)、日期選擇器。
+* **文章編輯器**：`Editor.js` (輸出格式為結構化 JSON)。
 * **網路請求**：`Axios` (攔截器處理 JWT Token 刷新與錯誤提示)。
 
 ---
 
 ## 2. 後端開發 (Backend)
 * **核心框架**：`FastAPI` (Python 3.12+)
-    * *選型原因*：原生支援非同步 (async/await)，效能優於 Django，且自動生成 Swagger API 文檔。
-* **資料庫 ORM**：`SQLAlchemy 2.0` (使用 Async 模式)
-    * 支援複雜的關聯查詢（如好友關係、權限聯表、巢狀留言）。
-* **身分驗證**：`JWT (JSON Web Token)` + `原生 bcrypt 雜湊`
-    * **修正**：棄用過時的 passlib，改由 bcrypt 手動處理 byte 轉換，並使用 HttpOnly Cookie 存儲防止 XSS。
-* **非同步通訊 (WebSocket)**：`FastAPI WebSocket`
-    * 用於實現即時聊天室、漂流瓶通知與系統實時通知。
+    * **技術特性**：原生支持 `async/await`，採用全異步驅動提升 I/O 併發效能。
+* **資料庫 ORM**：`SQLAlchemy 2.0 (AsyncIO)`
+    * 搭配 `asyncpg` 驅動，並利用 `selectinload` 解決異步環境下的 Lazy Loading 問題。
+* **身分驗證**：`JWT (JSON Web Token)` + `bcrypt`
+    * **雙 Token 策略**：Access Token (JWT) 搭配 Refresh Token (UUID in Redis)。
+* **裝置解析**：`user-agents`
+    * 用於從 Request Header 自動解析使用者設備 (OS、瀏覽器) 以進行安全審核。
+* **非同步通訊**：`FastAPI WebSocket`
+    * 實現即時聊天室與系統實時通知。
 * **郵件系統**：`Resend Python SDK`
-    * **修正**：取代傳統 SMTP，負責處理註冊驗證連結 (Verification Token) 的可靠發送。
+    * 取代傳統 SMTP，確保註冊驗證郵件的高送達率。
 
 ---
 
 ## 3. 資料儲存 (Data Storage)
-* **主要資料庫**：`PostgreSQL`
-    * 處理核心帳號 (Users)、權限 (Permissions) 與業務資料，並利用其內建「全文檢索」達成搜尋文章。
-* **快取與緩衝**：`Redis`
-    * 儲存登入驗證、限制 API 請求頻率 (Rate Limiting) 與 Session 快取。
-* **檔案儲存 (Media)**：
-    * 初期：伺服器本地磁碟卷 (Docker Volume)。
-    * 後期：可選配 S3 協議物件儲存（如 MinIO 或 AWS S3）。
+* **主要資料庫**：`PostgreSQL 16 (Alpine)`
+    * 處理核心帳號、權限與業務資料，並利用其內建「全文檢索」功能。
+* **快取與緩衝**：`Redis 7 (Alpine)`
+    * **套件**：使用 `redis.asyncio` 異步客戶端。
+    * **功能**：儲存 Refresh Token 紀錄、API 請求限流 (Rate Limiting)。
+* **管理工具**：`Adminer`
+    * 輕量級資料庫管理介面，透過 Docker 同步啟動。
 
 ---
 
 ## 4. 部署與基礎設施 (DevOps)
 * **容器化**：`Docker` & `Docker Compose`
-    * 統一開發與生產環境，一鍵啟動後端、資料庫、Redis。
-* **反向代理與靜態資源**：`Nginx`
-    * 處理 SSL 憑證、負載平衡，以及靜態圖片的加速存取。
-* **外網存取**：`Cloudflare Tunnel`
-    * 無需開放伺服器實體 Port，保障內網安全。
-* **前端託管**：`Cloudflare Pages`
-    * 達成前後端分離的物理隔離，提升前端全球加載速度。
+    * 一鍵啟動 `fastapi-app`、`kai_db`、`kai_redis`、`kai_adminer`。
+* **反向代理**：`Nginx`
+    * 處理 SSL 憑證與負載平衡。
+* **外網存取**：`Cloudflare Tunnel` (保障內網伺服器不暴露 Port)。
+* **前端託管**：`Cloudflare Pages` (提升全球存取速度)。
 
 ---
 
 ## 5. API 開發規格 (Standard)
 * **設計風格**：`RESTful API`。
-* **自動化文檔**：`Swagger / ReDoc` (FastAPI 內建)。
-* **跨域處理**：`CORSMiddleware` (精確限制允許的網域，如 Cloudflare Pages 來源)。
+* **自動化文檔**：`Swagger (docs)` / `ReDoc` (Redocly)。
+* **跨域處理**：`CORSMiddleware` (精確限制前端來源網域)。

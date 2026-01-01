@@ -1,4 +1,4 @@
-# 📊 ERD 資料庫實體關係定義 (V1.3 完整版)
+# 📊 ERD 資料庫實體關係定義 (V1.4)
 
 ## 1. 使用者、安全性與權限 (User & Auth)
 | 資料表 | 欄位 (Field) | 類型 | 說明 |
@@ -6,8 +6,10 @@
 | **users** | id, email, password_hash, is_active, verification_token, created_at | Int/UUID | **核心帳號**。`is_active` 驗證後開啟，`verification_token` 存驗證碼。 |
 | **user_permissions**| user_id (FK), is_superuser, can_post_note, can_use_fitness, is_banned | FK | **權限管理**。與 User 一對一，負責功能開關與封鎖邏輯。 |
 | **profiles** | user_id (FK), nickname, avatar, bio, is_profile_public | FK | **個人檔案**。可開關個人頁面存取權。 |
-| **user_devices** | id, user_id (FK), refresh_token, device_name, last_ip, last_active | FK | **設備管理**。紀錄多設備登入狀態與 Token 綁定。 |
+| **user_devices** | id, user_id (FK), device_id, device_name, last_ip, **is_active**, **last_login**, **last_logout**, last_active | FK | **Session 管理**。紀錄設備登入狀態、IP 與登出時間日誌。 |
 | **social_accounts** | id, user_id (FK), provider, provider_user_id | FK | **第三方登入**。儲存 Google/GitHub 綁定資訊。 |
+
+
 
 ## 2. 筆記與內容管理 (Note & Category)
 | 資料表 | 欄位 (Field) | 類型 | 說明 |
@@ -40,7 +42,12 @@
 - 註冊後立即建立 `user_permissions` 預設權限，但 `is_active` 需經信箱驗證。
 - `user_permissions` 取代了舊版的 `user_features`（語意更精確）。
 
-### 2. 雙版本審核機制
+### 2. 設備 Session 管理邏輯
+- 每個登入動作會記錄於 `user_devices`。
+- **登出時**：不刪除該筆資料，而是將 `is_active` 設為 `False` 並更新 `last_logout`。
+- **重複登入**：若 `user_id` + `device_id` 已存在，則更新 `last_ip` 並將 `is_active` 設回 `True`。
+
+### 3. 雙版本審核機制
 1. **編輯流**：作者編輯 `content_json` 時，個人空間即時顯示最新內容。
 2. **全站同步**：
     - 若 `status = 3` (全站公開) 且 `content_json` 被修改，`sync_status` 轉為 **1 (待同步)**。

@@ -1,16 +1,15 @@
-# 📄 API 規格書 (V1.1 - 2026 更新版)
+# 📄 API 規格書 (V1.2)
 
 ## 1. 認證與用戶管理 (Auth & User API)
 | 方法 | 路徑 | 說明 | 關鍵參數 / 備註 |
 | :--- | :--- | :--- | :--- |
-| **POST** | `/api/v1/users/register` | 使用者註冊 | {email, password} (初始化 Permissions) |
-| **GET** | `/api/v1/users/verify` | 驗證信箱 Token | Query: ?token=XYZ (啟用 is_active) |
-| **POST** | `/api/v1/users/resend-verify` | 重新發送驗證郵件 | 需串接 Resend 服務 |
-| **POST** | `/api/v1/auth/login` | 登入並發放雙 Token | {email, password, device_name} |
-| **POST** | `/api/v1/auth/refresh` | 刷新 Access Token | Header: Refresh-Token |
-| **GET** | `/api/v1/auth/devices` | 查看目前登入中的設備清單 | 顯示 IP、設備名、最後活動時間 |
-| **DELETE** | `/api/v1/auth/devices/{id}` | 強制登出指定設備 | 廢除特定裝置的 Session |
-| **POST** | `/api/v1/auth/logout` | 登出當前設備 | 清除 Refresh Token 紀錄 |
+| **POST** | `/api/v1/users/` | 使用者註冊 | `{email, password}` (初始化 Permissions) |
+| **GET** | `/api/v1/users/verify` | 驗證信箱 Token | Query: `?token=XYZ` (啟用 is_active) |
+| **POST** | `/api/v1/auth/login` | 登入並發放雙 Token | Body(Form): `username`, `password`<br>Body(JSON): `device_name` |
+| **POST** | `/api/v1/auth/refresh` | 刷新 Access Token | `{user_id, device_id, refresh_token}` |
+| **POST** | `/api/v1/auth/logout` | 登出當前設備 | `{user_id, device_id}` (清除 Redis 紀錄) |
+| **GET** | `/api/v1/auth/devices` | 查看登入中的設備清單 | 顯示 IP、設備 OS、瀏覽器、最後活動時間 |
+| **DELETE** | `/api/v1/auth/devices/{id}` | 強制登出指定設備 | 廢除特定裝置的 Redis Session |
 
 ---
 
@@ -46,7 +45,6 @@
 | **PATCH** | `/api/v1/admin/users/{id}/permissions` | 修改權限開關 | 調整 `is_banned`, `can_post_note` 等 |
 | **GET** | `/api/v1/admin/pending-notes` | 獲取所有「待審核」的文章 | 篩選 `sync_status = 1` 的資料 |
 | **POST** | `/api/v1/admin/notes/{id}/audit` | 執行審核動作 | 覆蓋 `published_content` 並歸零狀態 |
-| **GET** | `/api/v1/admin/audit-logs` | 系統操作日誌查詢 | 紀錄管理員變更權限或審核軌跡 |
 
 ---
 

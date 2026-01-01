@@ -10,8 +10,9 @@
 
 ## 🛠 技術棧 (Current Selection)
 - **前端 (Frontend)**: Vue 3 (Composition API), Vite, Tailwind CSS, Pinia, Editor.js
-- **後端 (Backend)**: FastAPI, SQLAlchemy 2.0, PostgreSQL, Redis
+- **後端 (Backend)**: FastAPI (Async), SQLAlchemy 2.0, PostgreSQL, Redis (Asyncio)
 - **基礎設施 (Infrastructure)**: Docker, Nginx, Cloudflare Tunnel
+
 
 
 ## 📂 開發文件導覽 (Development Docs)
@@ -24,23 +25,26 @@
 
 ## 📈 專案開發進度 (Development Roadmap)
 
-### Phase 1: 規格定義與架構設計
+### Phase 1: 規格定義與架構設計 (Completed ✅)
 - [x] **1.1 需求分析**：完成 PRD 核心功能定義。
 - [x] **1.2 技術選型**：確定前後端框架與資料庫。
 - [x] **1.3 資料建模**：完成 ERD 資料表關聯設計。
 - [x] **1.4 通訊規劃**：完成 API Spec 與 UI 邏輯架構。
 
-### Phase 2: 開發環境與框架建置 (Current Focus)
-- [ ] **2.1 基礎設施**：編寫 `docker-compose.yml` (啟動 Postgres, Redis)。
-- [ ] **2.2 後端骨架**：FastAPI 目錄結構初始化與資料庫連線設定。
-- [ ] **2.3 前端骨架**：Vue 3 專案初始化與路由系統設定。
-- [ ] **2.4 自動化遷移**：設定 Alembic 資料庫版本控管。
+### Phase 2: 開發環境與框架建置 (Completed ✅)
+- [x] **2.1 基礎設施**：完成 `docker-compose.yml` (Postgres, Redis, Adminer)。
+- [x] **2.2 後端骨架**：FastAPI 全異步 (Async) 目錄結構初始化與資料庫連線設定。
+- [x] **2.3 資料遷移**：實作自動化建表邏輯。
 
-### Phase 3: 核心功能與模組化開發 (Modular Iteration)
-- [ ] **3.1 認證模組**：註冊、登入、雙 Token 驗證、信箱驗證流。
+### Phase 3: 核心功能與模組化開發 (Current Focus 🚀)
+- [ ] **3.1 認證模組 (後端完成)**：
+    - [x] 全異步註冊流與權限自動初始化。
+    - [x] 基於 Redis 的雙 Token (Access/Refresh) 驗證機制。
+    - [x] 多設備 Session 狀態管理與 User-Agent 識別。
+    - [ ] 前端登入/註冊頁面實作。
 - [ ] **3.2 內容模組**：Editor.js 整合、知識分享與審核系統。
 - [ ] **3.3 互動模組**：WebSocket 聊天室、匿名漂流瓶。
-- [ ] **3.4 擴充模組預留**：電商原型、健身紀錄器、數據可視化圖表 (規劃中)。
+- [ ] **3.4 擴充模組預留**：健身紀錄器、數據可視化圖表。
 
 ### Phase 4: 優化與部署
 - [ ] **4.1 效能優化**：前端骨架屏、後端 API 快取。
@@ -49,8 +53,8 @@
 ## 📂 專案資料夾結構
 ```text
 .
-├── backend/      # FastAPI 後端服務
+├── backend/      # FastAPI 後端服務 (Native Async)
 ├── frontend/     # Vue 3 前端專案
-├── docs/         # 開發規格與設計文件庫
+├── docs/         # 開發規格與設計文件庫 (V1.2 更新)
 └── README.md     # 專案概覽與進度追蹤
 ```
