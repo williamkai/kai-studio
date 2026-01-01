@@ -1,32 +1,62 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from sqlalchemy.ext.asyncio import AsyncSession # 這裡改用異步 Session
 from ....database import get_db
-from ....schemas.user import UserCreate, UserOut
+from .... import schemas
 from ....crud import user as user_crud
+from ....services.email import send_verification_email
 
 router = APIRouter()
 
 @router.post(
     "/", 
-    response_model=UserOut,
-    status_code=status.HTTP_201_CREATED, # 成功建立通常用 201
-    summary="註冊新使用者",
-    description="輸入 Email 與密碼來建立新帳號。系統會檢查 Email 是否重複。",
-    responses={
-        400: {"description": "Email 已被註冊"},
-        422: {"description": "輸入格式錯誤 (例如 Email 格式不正確)"}
-    }
+    response_model=schemas.UserOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="註冊新使用者"
 )
-def register(user: UserCreate, db: Session = Depends(get_db)):
-    """
-    這裡也可以寫詳細的邏輯說明（Docstring），會顯示在 Swagger 的描述欄：
-    - **email**: 必須是有效的電子郵件格式
-    - **password**: 目前暫存為明文
-    """
-    db_user = user_crud.get_user_by_email(db, user.email)
+async def register(
+    user: schemas.UserCreate, 
+    background_tasks: BackgroundTasks, 
+    db: AsyncSession = Depends(get_db) # 注入異步 Session
+):
+    # 1. 檢查 Email (必須 await)
+    db_user = await user_crud.get_user_by_email(db, user.email)
     if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="此 Email 已被註冊"
         )
-    return user_crud.create_user(db, user)
+    
+    # 2. 建立新使用者 (必須 await)
+    new_user = await user_crud.create_user(db, user)
+    
+    # --- 關鍵修正處 ---
+    # 確保 new_user 真的存在，消除 "None" 屬性存取警告
+    if not new_user:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="使用者建立失敗"
+        )
+    
+    # 3. 寄出驗證郵件
+    # 使用 str() 確保轉型，並明確從 new_user 提取
+    background_tasks.add_task(
+        send_verification_email, 
+        email=str(new_user.email), 
+        token=str(new_user.verification_token)
+    )
+    
+    return new_user
+
+@router.get("/verify", summary="驗證電子郵件")
+async def verify_email(token: str, db: AsyncSession = Depends(get_db)): # 改為 async def
+    """
+    驗證成功後開通帳號。
+    """
+    # 呼叫異步 CRUD (必須 await)
+    user = await user_crud.verify_user_token(db, token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="驗證碼無效或已過期"
+        )
+    return {"message": "帳號驗證成功！您現在可以登入了。"}
