@@ -1,0 +1,34 @@
+services:
+  # 資料庫核心
+  db:
+    image: postgres:16-alpine
+    container_name: kai_db
+    restart: always
+    environment:
+      # 這裡的意思是：去讀取環境變數，如果沒讀到，就報錯
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 快取與 Session 管理
+  redis:
+    image: redis:7-alpine
+    container_name: kai_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  # 網頁版資料庫管理工具 (存取 localhost:8080)
+  adminer:
+    image: adminer
+    container_name: kai_adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
