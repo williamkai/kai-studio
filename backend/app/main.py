@@ -1,6 +1,7 @@
+# backend/app/main.py
 from fastapi import FastAPI
 from .database import engine, Base
-from .api.v1.endpoints import users, auth
+from .api.v1.endpoints import note, user, auth
 from . import models
 from contextlib import asynccontextmanager
 
@@ -22,9 +23,10 @@ app = FastAPI(
 )
 
 # 3. 匯入路由
-app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+# 檔案名稱是單數 (user.py, note.py)，但路徑 (prefix) 改成複數
+app.include_router(user.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
-
+app.include_router(note.router, prefix="/api/v1/notes", tags=["Notes"])
 @app.get("/")
 async def root(): # 順手改成 async
     return {"message": "Kai Studio API 全異步版本運行中"}

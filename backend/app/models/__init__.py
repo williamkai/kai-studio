@@ -1,3 +1,4 @@
+# backend/app/models/__init__.py
 from ..database import Base  # 確保 database.py 裡是用新的 DeclarativeBase
 from .user import User, UserPermission, UserDevice
 from .note import Note

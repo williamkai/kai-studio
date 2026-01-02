@@ -1,3 +1,4 @@
+# backend/app/core/redis.py
 import redis.asyncio as redis  # 重點：匯入 asyncio 版本
 from .config import settings
 

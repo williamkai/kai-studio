@@ -1,3 +1,4 @@
+# backend/app/database.py
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from .core.config import settings
@@ -38,19 +39,3 @@ async def get_db():
             # 異步環境下 async with 會自動處理關閉，
             # 但你也可以明確寫出來
             await db.close()
-            
-# from sqlalchemy import create_engine
-# from sqlalchemy.ext.declarative import declarative_base
-# from sqlalchemy.orm import sessionmaker
-# from .core.config import settings # 改從 config 讀取 URL
-
-# engine = create_engine(settings.DATABASE_URL)
-# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-# Base = declarative_base()
-
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()

@@ -1,12 +1,14 @@
-# 匯入各個檔案中的類別
+# backend/app/schemas/__init__.py
 from .user import UserCreate, UserOut, UserPermissionOut
 from .auth import LoginResponse, TokenRefreshResponse
+from .note import NoteCreate, NoteOut 
 
-# 這樣以後外部可以直接 access 這些類別
 __all__ = [
     "UserCreate", 
     "UserOut", 
     "UserPermissionOut", 
     "LoginResponse", 
-    "TokenRefreshResponse"
+    "TokenRefreshResponse",
+    "NoteCreate",
+    "NoteOut"
 ]

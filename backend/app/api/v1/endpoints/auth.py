@@ -1,3 +1,4 @@
+# backend/app/api/v1/endpoints/auth.py
 import uuid
 from user_agents import parse
 from datetime import timedelta
@@ -53,7 +54,7 @@ async def login_for_access_token(
     # 4. 產生雙 Token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     refresh_token = str(uuid.uuid4())
     

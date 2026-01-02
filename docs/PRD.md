@@ -1,4 +1,4 @@
-# 📄 PRD 產品需求文件 (V1.2)
+# 📄 PRD 產品需求文件 (V1.3)
 
 ## 1. 專案概述
 * **專案名稱**：個人化筆記與社交分享平台 (Kai Studio)
@@ -10,66 +10,55 @@
 ## 2. 角色權限與權限定義
 
 ### 2.1 超級管理員 (Superadmin)
-* **角色識別**：`user_permissions.is_superuser = True`。
-* **內容審核**：審核「全站公開 (status=3)」的文章，通過後更新 `published_content` 並將 `sync_status` 歸零。
-* **使用者管理**：透過權限表停權違規者（`is_banned`）或手動調整特定功能權限。
+* **角色識別**：user_permissions.is_superuser = True。
+* **內容審核**：針對 sync_status = 1 (待同步) 的文章進行審核，通過後將 content_json 覆蓋至 published_content 並將狀態歸零。
+* **使用者管理**：透過權限表停權違規者 (is_banned) 或手動調整特定功能權限。
 * **分類管理**：維護全站大類與子類標籤。
 
 ### 2.2 一般註冊使用者 (Verified User)
-* **帳號狀態**：`is_active = True` (需完成信箱驗證)。
-* **個人空間**：管理私有、個人頁公開、或全站公開的文章。
-* **權限控管**：根據 `user_permissions` 狀態決定是否可發文（`can_post_note`）或使用模組（`can_use_fitness`）。
+* **帳號狀態**：is_active = True (需完成信箱驗證)。
+* **個人空間**：管理私有 (0)、個人頁公開 (1)、或全站公開 (3) 的文章。
+* **權限控管**：根據 user_permissions 狀態決定是否可發文 (can_post_note) 或使用模組。
 * **互動權限**：追蹤他人、發送私訊、在公開文章留言。
 
 ### 2.3 訪客 (Visitor)
-* **權限**：僅能瀏覽站長指定之公開頁面、全站公開文章牆與他人公開之個人 Profile。
+* **權限**：僅能存取全站公開筆記 (/api/v1/notes/public) 與他人公開之個人 Profile。
 
 ---
 
 ## 3. UI/UX 導覽與流程架構
 
 ### 3.1 響應式導覽列 (Navbar)
-* **狀態 A (未登入)**：`首頁` | `關於我(站長)` | `全站公開筆記` | `登入/註冊`
-* **狀態 B (已登入)**：`首頁` | `全站公開筆記` | `個人空間` | `通知(鈴鐺)` | `使用者選單`
-    * *使用者選單內含：個人資料設定、設備管理、管理後台(限Admin)、登出。*
+* **狀態 A (未登入)**：首頁 | 關於我 | 全站公開筆記 | 登入/註冊
+* **狀態 B (已登入)**：首頁 | 全站公開筆記 | 個人空間 | 通知(鈴鐺) | 使用者選單
+    * 使用者選單內含：個人資料設定、設備管理、管理後台(限Admin)、登出。
 
-### 3.2 頁面跳轉邏輯
+### 3.2 驗證與跳轉邏輯
+* **驗證流**：使用者點擊信箱驗證連結後，後端驗證成功將導回前端登入頁並帶上成功狀態參數。
 * **登入後**：預設跳轉至「個人空間 (Personal Workspace)」。
-* **個人空間佈局**：
-    * 左側側邊欄：筆記管理、新增筆記、好友訊息、擴充功能入口（動態讀取 `user_permissions` 開啟狀態）。
 
 ---
 
 ## 4. 核心功能細節
 
 ### 4.1 註冊與驗證流 (Auth Flow)
-* **流程**：註冊 -> 系統產生 `verification_token` -> 寄送驗證連結 -> 使用者點擊 -> 更新 `is_active=True` 並初始化 `user_permissions`。
+* **流程**：註冊 -> 系統產生 verification_token -> 寄送驗證連結 -> 使用者點擊 -> 更新 is_active=True 並初始化預設 user_permissions。
 
-### 4.2 登入與 Session 管理 (Session Security)
-* **雙 Token 機制**：發放 Access Token (短期) 與 Refresh Token (長期)。
-* **設備指紋**：登入時自動解析 `User-Agent`（如：Windows 10, Chrome 120），紀錄 IP 與設備名稱。
-* **多設備管理**：使用者可查看目前登入中的所有設備，並能強制遠端登出指定設備。
+### 4.2 API 設計規範 (Restful Standard)
+* **命名原則**：後端內部檔案與實體採單數 (note.py, user.py)，外部網址進入點採複數 (/notes, /users) 以符合業界標準。
 
 ### 4.3 內容雙版本與審核 (Note Syncing)
-* **流程**：使用者修改公開文章 -> `sync_status` 轉為待同步 -> 管理員審核 -> 更新公開版內容。
-* **目的**：確保首頁內容品質，避免已公開文章被惡意修改。
+* **作者視角**：存取 /notes/me，編輯 content_json (草稿)。
+* **訪客視角**：存取 /notes/public，讀取 published_content (正式發佈版)。
+* **同步判定**：當作者修改 status=3 的文章，sync_status 自動標記為 1 (待同步)。
 
 ### 4.4 富文本編輯 (Editor)
 * **編輯器選型**：Editor.js (JSON 結構化資料)。
-* **版本控制**：系統自動保存最新 20 筆歷史 Snapshot (`note_history`)。
-
-### 4.5 社交與通訊
-* **即時私訊**：1-on-1 對話，支援 WebSocket 實時顯示。
-* **匿名漂流瓶**：隨機撈取、匿名留言互動。
+* **版本控制**：系統自動保存最新 20 筆歷史 Snapshot (note_history)。
 
 ---
 
-## 5. 擴充模組數據 (Module Data)
-* **設計理念**：`user_permissions` 負責開關，`feature_fitness` / `feature_finance` 負責儲存實際數據。
-
----
-
-## 6. 技術指標需求
+## 5. 技術指標需求
 * **效能需求**：後端採用全異步 (AsyncIO) 驅動，支持高併發連接。
-* **安全性需求**：密碼需經過 `bcrypt` 雜湊，Refresh Token 存儲於 Redis 並支援即時廢除。
+* **安全性需求**：密碼需經過 bcrypt 雜湊，API 存取需攜帶 JWT Access Token。
 * **響應式需求**：完美適配手機、平板、桌機。

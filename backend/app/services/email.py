@@ -1,3 +1,4 @@
+# backend/app/services/email.py
 import resend
 from app.core.config import settings
 
@@ -8,7 +9,7 @@ async def send_verification_email(email: str, token: str):
     """
     發送註冊驗證信
     """
-    # 驗證連結，注意：這裡的路徑之後要跟 api/v1/endpoints/users.py 一致
+    # 驗證連結，注意：這裡的路徑之後要跟 api/v1/endpoints/user.py 一致
     verify_link = f"{settings.FRONTEND_URL}/api/v1/users/verify?token={token}"
     
     # 確保 email 是 list 格式（有些 SDK 版本要求 to 必須是清單）
