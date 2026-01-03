@@ -1,19 +1,40 @@
-# Python (Backend)
-__pycache__/
+# === Python (Backend) ===
+# 使用 **/ 確保所有子資料夾下的快取都被忽略
+**/__pycache__/
 *.py[cod]
 *$py.class
-.venv/
-env/
-.env
-*.pyc
+# 忽略虛擬環境資料夾
 venv/
+env/
+.venv/
+# 忽略環境變數檔案（內含金鑰，絕對不能上傳）
+.env
+.env.local
 
-# Node.js (Frontend)
-node_modules/
-dist/
-dist-ssr/
-*.local
+# === Node.js (Frontend) ===
+# 忽略前端龐大的依賴庫（透過 npm install 隨時可以裝回來）
+frontend/node_modules/
+# 忽略打包後的結果
+frontend/dist/
+frontend/dist-ssr/
+# 忽略前端的本地環境設定
+frontend/*.local
 
-# Database & OS
-.DS_Store
+# === Logs (日誌) ===
+# 忽略所有層級的日誌檔案，避免垃圾檔案佔空間
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+
+# === Database & OS (系統與資料庫) ===
+# 忽略本機資料庫檔案（資料應透過 Migration 處理，不傳檔案）
 postgres_data/
+# 忽略系統自動產生的縮圖/索引檔案
+.DS_Store
+Thumbs.db
+
+# === Editor (編輯器) ===
+# 忽略 VS Code 或 JetBrains 的個人化設定
+.vscode/
+.idea/
+*.sw?
