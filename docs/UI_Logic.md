@@ -1,53 +1,58 @@
-# 📄 UI 邏輯與組件結構 (V1.1 - 2026 同步版)
+# 📄 UI 邏輯與組件結構 (V1.2 - React 遷移版)
 
 ## 1. 專案目錄結構 (Folder Structure)
-保持原定模組化結構，強調 `api/` 需與後端 `v1` 路由對齊。核心邏輯將封裝於 `stores/`（Pinia）與 `utils/`（Axios 攔截器）中，確保身分驗證邏輯全域統一。
+採用功能導向結構。核心邏輯封裝於 `store/` (Zustand) 與 `hooks/` (自定義 Hook) 中，確保身分驗證邏輯全域統一。
 
 ```text
 src/
 ├── api/            # 封裝 Axios 請求 (auth.js, users.js, notes.js)
-├── stores/         # Pinia 狀態管理 (auth.js 儲存 user_id, device_id, access_token)
-├── utils/          # 共用工具 (axios_instance.js 實作自動刷新邏輯)
-└── views/
-    ├── auth/       # 登入、註冊、設備管理 (New)
-    └── ...
+├── store/          # Zustand 狀態管理 (useAuthStore.js 儲存 JWT 與權限)
+├── hooks/          # 自定義 Hooks (useAuth.js, useAxiosInterceptor.js)
+├── utils/          # 共用工具 (axiosInstance.js 實作攔截器)
+├── components/     # 通用 UI 組件 (Navbar, Button, Skeleton)
+└── pages/          # 路由頁面實體
+    ├── auth/       # Login, Register, DeviceManagement
+    └── notes/      # NoteEditor, PublicWall
 ```
 
 ---
 
 ## 2. 佈局邏輯 (Layout Strategy)
-* **App Layout**: 側邊欄應根據 `user_permissions` 動態顯示模組按鈕。
-* **設備管理介面**: 在使用者選單中新增「登入設備管理」頁面，串接 `/auth/devices` API。
+* **Main Layout**: 使用 React Router 的 `<Outlet />` 實現巢狀佈局。側邊欄應根據 `user_permissions` 動態渲染功能模組。
+* **設備管理介面**: 整合於使用者選單，串接 `/auth/devices` API，展示設備指紋資訊。
 
 ---
 
-## 3. 前端權限守衛 (Navigation Guards)
-在 `router/index.js` 中實作：
-1. **登入檢查**: 檢查 Pinia 中的 `access_token`。若無，檢查 `localStorage` 裡的 `refresh_token`。
-2. **設備驗證**: 每次登入時生成或讀取 `device_id` 並傳送至後端。
+## 3. 前端路由與權限守衛 (React Router Guards)
+在 `App.jsx` 或專屬的 `ProtectedRoute` 組件中實作：
+1. **登入檢查**: 讀取 Zustand Store 中的 `accessToken`。若失效，則嘗試透過攔截器靜默刷新。
+2. **自動導向**: 未經授權使用者存取受保護路徑時，自動導向至 `/login`。
+3. **設備識別**: 在應用程式初始化時（`useEffect`），於前端生成或讀取 `device_id`。
 
 ---
 
-## 4. 核心組件開發邏輯
-### 4.1 設備管理組件 (DeviceManager.vue)
-* **功能**: 列出所有登入中的裝置（解析自後端 `user-agents` 資料）。
-* **互動**: 提供「強制踢除」按鈕，呼叫 `DELETE /auth/devices/{id}`。
+## 4. 核心組件開發邏輯 (React Logic)
+### 4.1 設備管理組件 (DeviceManager.jsx)
+* **狀態管理**: 使用 `useState` 管理設備列表，`useEffect` 觸發 API 請求。
+* **互動**: 提供「強制踢除」按鈕，呼叫 `DELETE /auth/devices/{id}` 並重新獲取列表。
 
-### 4.2 區塊編輯器 (Editor.vue)
-* **Auto-save**: 配合後端異步特性，實作 `Loading` 狀態提示，確保 JSON 寫入成功。
+### 4.2 區塊編輯器組件 (NoteEditor.jsx)
+* **編輯器初始化**: 使用 `useRef` 綁定 Editor.js 實例，確保組件重新渲染時不重複初始化。
+* **自動儲存**: 監聽變動並顯示 `Saving...` 狀態，確保 JSON 同步至後端。
 
 ---
 
 ## 5. UI 交互細節 (UX Enhancements)
 ### 5.1 無感 Token 刷新 (Silent Refresh)
-* **攔截器邏輯**:
-    1. 當 Axios 收到 `401 Unauthorized` 錯誤。
-    2. 自動從 Store 提取 `{user_id, device_id, refresh_token}`。
-    3. 呼叫 `POST /auth/refresh` 進行異步刷新。
-    4. 成功後更新 Store 並重發原本失敗的請求；失敗則清除狀態並跳轉至 `/login`。
+* **Axios 攔截器實作**:
+    1. 當 Axios 收到 `401 Unauthorized` 錯誤且非登入請求時。
+    2. 自動從 Zustand Store 提取 `{user_id, device_id, refresh_token}`。
+    3. 執行 `POST /auth/refresh`。
+    4. **成功**: 更新 Store 的 Token 並重發原本失敗的請求。
+    5. **失敗**: 清除所有 Store 狀態（Logout）並導向至登入頁。
 
 ### 5.2 響應式設備識別
-* 登入時前端可傳送自定義 `device_name`（如：我的工作筆電），若無則由後端自動解析 Request Header。
+* 登入表單提供可選的 `device_name` 欄位（例如：家中的筆電）。
 
 ### 5.3 骨架屏 (Skeleton Screens)
-* 針對筆記列表與社交動態牆進行佔位渲染，提升非同步數據加載時的視覺流暢感。
+* 使用 Ant Design 提供的 `<Skeleton />` 組件，在 React Query 處於 `isLoading` 狀態時進行佔位渲染。

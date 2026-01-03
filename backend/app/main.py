@@ -27,6 +27,8 @@ app = FastAPI(
 app.include_router(user.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(note.router, prefix="/api/v1/notes", tags=["Notes"])
+
+# 4. 根路由和健康檢查端點
 @app.get("/")
 async def root(): # 順手改成 async
     return {"message": "Kai Studio API 全異步版本運行中"}
