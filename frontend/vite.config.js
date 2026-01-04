@@ -1,17 +1,28 @@
 // frontend/vite.config.js
-import tailwindcss from '@tailwindcss/vite'; // 1. 引入 Tailwind v4 插件
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
+import { fileURLToPath } from 'url'; // 1. 引入 url 工具
 import { defineConfig } from 'vite'
+
+// 2. 在 ESM 模式下手動建立 __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss(), // 2. 啟用 Tailwind 插件
+    tailwindcss(),
   ],
+  resolve: {
+    alias: {
+      // 3. 現在 __dirname 就能正常運作了
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   server: {
     proxy: {
-      // 3. 設定代理，讓前端 /api 請求轉發到後端 FastAPI
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
