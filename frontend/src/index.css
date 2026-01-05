@@ -1,67 +1,32 @@
 @import "tailwindcss";
 
-/* 定義全域變數 */
 :root {
-    /* --- 明亮模式 (純淨高對比) --- */
     --bg-page: #f8fafc;
-    /* 淺灰底 */
     --bg-card: #ffffff;
-    /* 純白卡片 */
     --text-primary: #0f172a;
-    /* 深藍黑 */
     --text-secondary: #475569;
-    /* 灰色字 */
     --border-color: #e2e8f0;
-    /* 淺色邊框 */
-    --brand-color: #2563eb;
-    /* 亮藍 */
 }
 
 .dark {
-    /* --- 深色模式 (深邃藍黑) --- */
     --bg-page: #020617;
-    /* 極深藍底 */
     --bg-card: #0f172a;
-    /* 深藍卡片 */
     --text-primary: #f1f5f9;
-    /* 近純白 */
     --text-secondary: #94a3b8;
-    /* 灰藍字 */
     --border-color: #1e293b;
-    /* 深藍邊框 */
-    --brand-color: #3b82f6;
-    /* 較亮的藍 */
-}
-
-.sepia {
-    /* --- 護眼模式 (暖色羊皮紙) --- */
-    --bg-page: #f2e7d5;
-    /* 暖黃底 */
-    --bg-card: #fdf6e3;
-    /* 淺黃卡片 */
-    --text-primary: #433422;
-    /* 深茶色字 */
-    --text-secondary: #715c44;
-    /* 淺茶色字 */
-    --border-color: #e5d3b3;
-    /* 暖色邊框 */
-    --brand-color: #b45309;
-    /* 琥珀色 */
 }
 
 body {
     background-color: var(--bg-page);
     color: var(--text-primary);
-    transition: all 0.3s ease;
-    @apply antialiased font-sans min-h-screen;
+    transition: background-color 0.3s, color 0.3s;
+    @apply antialiased min-h-screen;
 }
 
-/* 這裡是處理邏輯的關鍵：定義通用樣式，讓元件自動跟隨主題 */
 .app-card {
     background-color: var(--bg-card);
-    border: 1px solid var(--border-color);
+    border-color: var(--border-color);
     color: var(--text-primary);
-    transition: all 0.3s ease;
 }
 
 .app-text-muted {

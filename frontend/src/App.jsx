@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/App.jsx 修正版
 import useAuthStore from '@/features/auth/store/useAuthStore';
 import AdminLayout from '@/layouts/AdminLayout';
 import MainLayout from '@/layouts/MainLayout';
@@ -14,28 +14,30 @@ function App() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
 
-        {/* 修正：如果已登入，訪問 /login 會根據角色踢走，不讓他在這停留 */}
+        {/* 1. 登入路由守衛 */}
         <Route
           path="/login"
-          element={
-            isLoggedIn
-              ? <Navigate to={user?.role === 'admin' ? '/admin' : '/'} replace />
-              : <Login />
-          }
+          element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login />}
         />
 
-        {/* 萬用路由：找不到的網址通通回首頁 */}
+        {/* 2. 新增：註冊頁面（目前先放個簡單的 div，之後補頁面） */}
+        <Route
+          path="/register"
+          element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <div className="p-20 text-center">註冊頁面建設中</div>}
+        />
+        {/* 3. 新增：個人空間 (需要登入) */}
+        <Route
+          path="/dashboard"
+          element={isLoggedIn ? <div className="p-10"><h1>我的筆記空間</h1></div> : <Navigate to="/login" replace />}
+        />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
 
-      {/* --- 後台區域：嚴格守衛 --- */}
+      {/* --- 後台區域 --- */}
       <Route
         path="/admin"
-        element={
-          isLoggedIn && user?.role === 'admin'
-            ? <AdminLayout />
-            : <Navigate to="/" replace />
-        }
+        element={isLoggedIn && user?.role === 'admin' ? <AdminLayout /> : <Navigate to="/" replace />}
       >
         <Route index element={<div className="p-4 bg-white rounded shadow text-black">這是後台數據看板</div>} />
         <Route path="users" element={<div className="p-4 bg-white rounded shadow text-black">用戶管理清單</div>} />
