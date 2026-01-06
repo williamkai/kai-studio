@@ -1,27 +1,46 @@
 import { create } from 'zustand';
 
 const useAuthStore = create((set) => ({
-    // 初始化時直接從 localStorage 讀取，這保證了開新分頁或重新整理時狀態還在
     isLoggedIn: !!localStorage.getItem('token'),
-    user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null,
+    user: (() => {
+        try {
+            const savedUser = localStorage.getItem('user');
+            return savedUser ? JSON.parse(savedUser) : null;
+        } catch (error) {
+            return null;
+        }
+    })(),
 
     login: (userData, token) => {
-        // 存入記憶體
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
-
-        // 更新大腦狀態
         set({ isLoggedIn: true, user: userData });
     },
 
     logout: () => {
-        // 清除記憶體
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-
-        // 重置大腦狀態
         set({ isLoggedIn: false, user: null });
     }
 }));
+
+// --- 關鍵：處理跨分頁同步 ---
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (event) => {
+        // 當 token 被改變時（登入或登出）
+        if (event.key === 'token') {
+            const newToken = event.newValue;
+
+            if (!newToken) {
+                // 如果是登出（Token 被刪除）
+                useAuthStore.getState().logout();
+            } else {
+                // 如果是登入（Token 出現）
+                // 為了安全與確保資料同步，最穩健的做法是重新整理頁面
+                window.location.reload();
+            }
+        }
+    });
+}
 
 export default useAuthStore;

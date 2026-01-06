@@ -1,7 +1,8 @@
 // src/config/index.js
 const config = {
-    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
-    isMock: true, // 開發時設為 true，對接後端時改為 false
+    // 組合出 http://127.0.0.1:8000/api/v1
+    apiBaseUrl: `${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_PREFIX}`,
+    isMock: import.meta.env.VITE_IS_MOCK === 'true',
 };
 
 export default Object.freeze(config);

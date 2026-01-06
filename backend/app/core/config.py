@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # 定義變數名稱與類型，Pydantic 會自動去 .env 找對應的大寫名稱
     PROJECT_NAME: str = "Kai Studio"
 
+    # 補上這一行，預設為 False，可以在 .env 中改為 True
+    DEBUG: bool = Field(default=False, description="是否開啟偵錯模式")
+
     # 使用 Optional 並給予預設值 None，解決 Pylance 的報錯
     POSTGRES_USER: Optional[str] = None
     POSTGRES_PASSWORD: Optional[str] = None
