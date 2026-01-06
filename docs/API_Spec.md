@@ -1,49 +1,64 @@
-# 📄 API 規格書 (V1.3)
+# 📄 API 規格書 (V1.4)
 
 ## 1. 認證與用戶管理 (Auth & Users API)
 | 方法 | 路徑 | 說明 | 關鍵參數 / 備註 |
 | :--- | :--- | :--- | :--- |
-| **POST** | `/api/v1/users/` | 使用者註冊 | {email, password} (初始化 Permissions) |
-| **GET** | `/api/v1/users/verify` | 驗證信箱 Token | Query: ?token=XYZ (啟用 is_active) |
-| **POST** | `/api/v1/auth/login` | 登入並發放 Token | Body(Form): username, password |
-| **POST** | `/api/v1/auth/logout` | 登出當前設備 | 清除 Session 紀錄 |
-| **GET** | `/api/v1/auth/devices` | 查看登入中的設備清單 | 顯示 IP、設備名稱、最後活動時間 |
+| **POST** | `/api/v1/users/` | 使用者註冊 | `{email, password}` -> 發送驗證信 |
+| **GET** | `/api/v1/users/verify` | 驗證信箱 Token | Query: `?token=...` -> 啟用 `is_active` |
+| **POST** | `/api/v1/auth/login` | 登入並發放雙 Token | 回傳 `access`, `refresh`, `device_id`, `user` |
+| **POST** | `/api/v1/auth/refresh` | 刷新 Access Token | 使用 `refresh_token` + `device_id` 換新 |
+| **POST** | `/api/v1/auth/logout` | 設備登出 | 移除 Redis 中的 `refresh_token` |
+| **GET** | `/api/v1/auth/devices` | 設備管理清單 | 顯示 `device_name` (UA 解析) 與最後登入 IP |
 
 ---
 
 ## 2. 筆記與審核流 (Notes API)
 | 方法 | 路徑 | 說明 | 權限要求 |
 | :--- | :--- | :--- | :--- |
-| **GET** | `/api/v1/notes/public` | 獲取「全站公開」筆記列表 | **免登入** (僅限已審核內容) |
+| **GET** | `/api/v1/notes/public` | 獲取「全站公開」列表 | 免登入 (僅限已審核內容) |
 | **GET** | `/api/v1/notes/me` | 獲取「我的」所有筆記 | 需登入 (含私有/草稿) |
-| **POST** | `/api/v1/notes/` | 建立新筆記 | 需登入 (can_post_note = True) |
-| **PATCH** | `/api/v1/notes/{id}` | 更新筆記內容或狀態 | 作者本人 (自動判定 sync_status) |
+| **POST** | `/api/v1/notes/` | 建立新筆記 | 需登入且 `can_post_note = True` |
+| **PATCH** | `/api/v1/notes/{id}` | 更新內容或狀態 | 作者本人 (自動標記 `sync_status=1`) |
 | **DELETE** | `/api/v1/notes/{id}` | 刪除筆記 | 作者本人 |
-| **GET** | `/api/v1/notes/{id}` | 獲取單篇詳細內容 | 權限檢查 (私有/公開判定) |
 
 ---
 
 ## 3. 社交與即時通訊 (Social & Chat API)
 | 方法 | 路徑 | 說明 | 備註 |
 | :--- | :--- | :--- | :--- |
-| **GET** | `/api/v1/social/profiles/{uid}` | 獲取他人公開主頁資料 | 檢查 is_profile_public 狀態 |
-| **POST** | `/api/v1/social/follows/{id}` | 追蹤 / 取消追蹤使用者 | 修改 follows 表 |
-| **GET** | `/api/v1/chat/rooms` | 獲取所有私訊對話清單 | 包含最後訊息與未讀數 |
-| **POST** | `/api/v1/bottles/drop` | 扔出一個匿名漂流瓶 | 存入 drift_bottles |
+| **GET** | `/api/v1/social/profiles/{uid}` | 獲取他人公開主頁 | 檢查 `is_profile_public` |
+| **POST** | `/api/v1/social/follows/{id}` | 追蹤 / 取消追蹤 | 修改 `follows` 表 |
+| **GET** | `/api/v1/chat/rooms` | 獲取私訊對話清單 | 支援 WebSocket 即時更新 |
 
 ---
 
-## 4. 超級管理員後台 (Admin Portal API)
-*需通過 is_superuser = True 檢查*
+## 4. 管理員後台 (Admin API)
+*權限：`is_superuser = True`*
 | 方法 | 路徑 | 說明 | 功能 |
 | :--- | :--- | :--- | :--- |
-| **GET** | `/api/v1/admin/users` | 獲取全站使用者清單 | 聯表查詢 Permissions 狀態 |
-| **PATCH** | `/api/v1/admin/users/{id}/permissions` | 修改權限開關 | 調整 is_banned, can_post_note 等 |
-| **GET** | `/api/v1/admin/notes/pending` | 獲取所有「待審核」的文章 | 篩選 sync_status = 1 的資料 |
-| **POST** | `/api/v1/admin/notes/{id}/audit` | 執行審核動作 | 覆蓋 published_content 並歸零狀態 |
+| **GET** | `/api/v1/admin/users` | 全站使用者管理 | 包含封鎖、權限調整 |
+| **GET** | `/api/v1/admin/notes/pending` | 待審核清單 | 篩選 `sync_status = 1` |
+| **POST** | `/api/v1/admin/notes/{id}/audit` | 審核通過 | 內容發佈至 `published_content` |
 
 ---
 
-## 5. 共通回應格式 (Response Standard)
-目前開發階段以 FastAPI 自動生成的 Response 為主，後續視需求封裝統一格式：
-(待開發前端時優化)
+## 5. 統一回應格式 (Response Schema)
+後端採用 `backend/app/schemas/common.py` 定義之標準格式：
+
+### 成功回應 (200 OK)
+
+```json
+{
+  "message": "SUCCESS_CODE",
+  "data": { ...內容... }
+}
+```
+### 錯誤回應 (4xx / 5xx)
+
+```json
+{
+  "detail": "ERROR_CODE",
+  "error_code": "ERR_XXX",
+  "message": "可讀性的錯誤描述"
+}
+```

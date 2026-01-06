@@ -1,21 +1,63 @@
 // src/App.jsx
+import useAuthStore from '@/features/auth/store/useAuthStore';
+import AdminLayout from '@/layouts/AdminLayout';
+import MainLayout from '@/layouts/MainLayout';
+import Home from '@/pages/Home';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import VerifyEmail from '@/pages/VerifyEmail';
+import { Navigate, Route, Routes } from 'react-router-dom';
+
+// 1. 訪客專區：已登入者跳轉回後台
+const PublicRoute = ({ children }) => {
+  const { isLoggedIn } = useAuthStore();
+  return isLoggedIn ? <Navigate to="/dashboard" replace /> : children;
+};
+
+// 2. 會員專區：沒登入不准看
+const PrivateRoute = ({ children }) => {
+  const { isLoggedIn } = useAuthStore();
+  return isLoggedIn ? children : <Navigate to="/login" replace />;
+};
+
+// 3. 管理員專區：不是管理員不准看
+const AdminRoute = ({ children }) => {
+  const { isLoggedIn, user } = useAuthStore();
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  return user?.role === 'admin' ? children : <Navigate to="/dashboard" replace />;
+};
+
 function App() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
-      {/* 這是一個使用 Tailwind v4 樣式的測試標題 */}
-      <h1 className="text-4xl font-extrabold text-blue-600 tracking-tight">
-        Kai-Studio
-      </h1>
-      <p className="text-slate-500 mt-4 text-lg">
-        前端開發環境已就緒，準備開始寫登入功能。
-      </p>
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<Home />} />
 
-      {/* 測試按鈕，確認 Tailwind 的 hover 效果 */}
-      <button className="mt-8 px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors shadow-lg">
-        環境測試成功
-      </button>
-    </div>
-  )
+        {/* 訪客分流：Login, Register, Verify */}
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/verify" element={<PublicRoute><VerifyEmail /></PublicRoute>} />
+
+        {/* 會員保護 */}
+        <Route path="/dashboard" element={
+          <PrivateRoute>
+            <div className="p-10 text-center">
+              <h1 className="text-3xl font-black">🚀 我的筆記空間</h1>
+              <p className="mt-4 text-[var(--text-secondary)]">後端驗證完畢後，這裡將顯示您的筆記列表</p>
+            </div>
+          </PrivateRoute>
+        } />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+
+      {/* 管理員保護 */}
+      <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+        <Route index element={<div className="p-6">後台看板</div>} />
+        <Route path="users" element={<div className="p-6">用戶管理</div>} />
+      </Route>
+    </Routes>
+  );
 }
 
-export default App
+export default App;

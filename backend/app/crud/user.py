@@ -1,4 +1,5 @@
 # backend/app/crud/user.py
+from datetime import datetime, timezone
 import secrets
 from typing import Any, Optional
 from datetime import datetime
@@ -74,7 +75,8 @@ async def record_device_login(db: AsyncSession, user_id: int, device_id: str, ip
         )
     )
     db_device = result.scalars().first()
-    now = datetime.now()
+    # now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     if db_device:
         db_device.last_ip = ip
@@ -106,5 +108,5 @@ async def record_device_logout(db: AsyncSession, user_id: int, device_id: str):
     db_device = result.scalars().first()
     if db_device:
         db_device.is_active = False
-        db_device.last_logout = datetime.now()
+        db_device.last_logout = datetime.now(timezone.utc)
         await db.commit()

@@ -4,13 +4,18 @@ from pydantic import Field
 from pathlib import Path
 from typing import Optional
 
-# 找到 .env 檔案的路徑
-# 根據你的目錄結構：backend/app/core/config.py -> 往上三層是 backend/
-DOTENV_PATH = Path(__file__).parent.parent.parent.parent / ".env"
-
+# 調整後的路徑邏輯：
+# __file__ 是 backend/app/core/config.py
+# .parent          -> backend/app/core/
+# .parent.parent   -> backend/app/
+# .parent.parent.parent -> backend/ (這就是你要的地方)
+DOTENV_PATH = Path(__file__).parent.parent.parent / ".env"
 class Settings(BaseSettings):
     # 定義變數名稱與類型，Pydantic 會自動去 .env 找對應的大寫名稱
     PROJECT_NAME: str = "Kai Studio"
+
+    # 補上這一行，預設為 False，可以在 .env 中改為 True
+    DEBUG: bool = Field(default=False, description="是否開啟偵錯模式")
 
     # 使用 Optional 並給予預設值 None，解決 Pylance 的報錯
     POSTGRES_USER: Optional[str] = None
@@ -28,7 +33,7 @@ class Settings(BaseSettings):
 
     # 讀取 .env 的設定
     model_config = SettingsConfigDict(
-        env_file=DOTENV_PATH,
+        env_file=str(DOTENV_PATH),
         env_file_encoding='utf-8',
         extra='ignore' # 如果 .env 有多餘變數就忽略
     )

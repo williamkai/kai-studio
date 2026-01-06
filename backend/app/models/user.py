@@ -52,10 +52,13 @@ class UserDevice(Base):
     
     # 新增狀態追蹤
     is_active: Mapped[bool] = mapped_column(default=True) 
-    last_login: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    last_logout: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    
+    last_login: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_logout: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # 自動更新最後活動時間
     last_active: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

@@ -1,3 +1,38 @@
-/* ./frontend/src/index.css */
-/* Tailwind CSS  */
 @import "tailwindcss";
+
+:root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #e2e8f0;
+}
+
+.dark {
+    --bg-page: #020617;
+    --bg-card: #0f172a;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #1e293b;
+}
+
+body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    transition: background-color 0.3s, color 0.3s;
+    @apply antialiased min-h-screen;
+}
+
+.app-card {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.app-text-muted {
+    color: var(--text-secondary);
+}
+
+.app-border {
+    border-color: var(--border-color);
+}
