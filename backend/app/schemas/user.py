@@ -8,6 +8,7 @@ import re
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    turnstile_token: str
 
     @field_validator('password')
     @classmethod

@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     UNVERIFIED_ACCOUNT_CLEANUP_HOURS: int = 24
 
     # --- Cloudflare Turnstile ---
-    TURNSTILE_SECRET_KEY: Optional[str] = None
+    TURNSTILE_SECRET_KEY: str = Field(default="", description="Cloudflare Turnstile 密鑰")
 
     # --- Pydantic 設定 ---
     model_config = SettingsConfigDict(

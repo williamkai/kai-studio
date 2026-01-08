@@ -1,3 +1,4 @@
+// src/features/users/api/userService.js
 import apiClient from '@/api/apiClient';
 import { ENDPOINTS } from '@/api/endpoints';
 
@@ -5,9 +6,12 @@ const userService = {
     /**
      * 註冊新帳號
      * @param {Object} userData - 包含 email, password
+     * @param {string} turnstileToken - Cloudflare Turnstile 驗證 Token
      */
-    register: async (userData) => {
-        const response = await apiClient.post(ENDPOINTS.USER.REGISTER, userData);
+    register: async (userData, turnstileToken) => {
+        // 將 turnstileToken 與 userData 合併再送給後端
+        const payload = { ...userData, turnstileToken };
+        const response = await apiClient.post(ENDPOINTS.USER.REGISTER, payload);
         return response.data;
     },
 

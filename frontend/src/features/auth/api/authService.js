@@ -1,13 +1,17 @@
-// src/features/auth/api/authService.js
 import apiClient from '@/api/apiClient';
 import { ENDPOINTS } from '@/api/endpoints';
 import config from '@/config';
 
 const authService = {
     /**
-     * 登入功能
-     */
-    login: async (email, password) => {
+    * 使用者登入
+    * @param {Object} param0 - 登入資料
+    * @param {string} param0.email - 使用者 Email
+    * @param {string} param0.password - 密碼
+    * @param {string} param0.turnstileToken - Turnstile 驗證 token
+    * @returns {Object} - 包含 access_token, refresh_token, device_id, user 資訊
+    */
+    login: async ({ email, password, turnstileToken }) => {
         if (config.isMock) {
             console.log("正在使用模擬登入 (Mock Mode)...");
             await new Promise(resolve => setTimeout(resolve, 800));
@@ -27,14 +31,14 @@ const authService = {
             }
         }
 
-        // 1. 確保傳給後端的 key 是 email
+        // 非 Mock 模式：傳入 turnstileToken
         const response = await apiClient.post(ENDPOINTS.AUTH.LOGIN, {
-            email,      // 對應 LoginRequest 的 email
-            password,   // 對應 LoginRequest 的 password
+            email,                 // 對應 LoginRequest 的 email
+            password,              // 對應 LoginRequest 的 password
+            turnstile_token: turnstileToken // 新增
         });
 
-        // 2. 後端目前回傳 LoginResponse，裡面沒有 user 對象
-        // 我們要在這裡「加工」一下，讓前端 Store 好收資料
+        // 後端回傳資料加工成前端 Store 好用的格式
         const { access_token, user, refresh_token, device_id } = response.data;
 
         return {
@@ -50,18 +54,12 @@ const authService = {
         };
     },
 
-    /**
-     * 刷新 Token (對應後端 /api/v1/auth/refresh)
-     */
     refresh: async () => {
         if (config.isMock) return { token: 'new-mock-token' };
         const response = await apiClient.post(ENDPOINTS.AUTH.REFRESH);
         return response.data;
     },
 
-    /**
-     * 登出功能
-     */
     logout: async () => {
         if (config.isMock) return { success: true };
         return await apiClient.post(ENDPOINTS.AUTH.LOGOUT);
