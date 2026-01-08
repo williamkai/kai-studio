@@ -2,7 +2,7 @@
 from sqlalchemy import String, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, TYPE_CHECKING
-from ..database import Base
+from ..infrastructure.database.database import Base
 
 if TYPE_CHECKING:
     from .user import User

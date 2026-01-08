@@ -1,20 +1,40 @@
-from fastapi import FastAPI, Request, HTTPException, status
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
-from .database import engine, Base
-from .api.v1.endpoints import note, user, auth
-from .core.config import settings
-from . import models
-from contextlib import asynccontextmanager
+# backend/app/main.py
 
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+import asyncio
+
+# -----------------------
+# 核心設定與資料庫
+from app.core.config import settings                 # 專案設定
+from app.infrastructure.database.database import engine  # DB 連線與 metadata
+from app.tasks.cleanup import run_cleanup_scheduler  # 背景排程
+
+# -----------------------
+# 拆出去的功能
+from app.core.handlers import register_exception_handlers  # 全域異常處理器
+from app.core.cors import register_cors                    # CORS 設定
+from app.api.v1.router import api_router                  # API 路由整合
+from app.infrastructure.rate_limit.limiter import limiter, rate_limit_exceeded_handler  # Rate-limit
+
+# =======================
+# FastAPI 生命週期管理
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(models.Base.metadata.create_all)
+    """
+    - 啟動背景排程
+    - 關閉時釋放 DB 連線
+    """
+    print("應用程式啟動中...")
+
+    asyncio.create_task(run_cleanup_scheduler())
     yield
+    print("應用程式關閉中...")
     await engine.dispose()
 
+
+# =======================
+# 建立 FastAPI app 實例
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="""
@@ -28,71 +48,38 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# --- 1. 全域異常處理器 (Global Exception Handlers) ---
 
-@app.exception_handler(HTTPException)
-async def custom_http_exception_handler(request: Request, exc: HTTPException):
-    """捕捉所有手動 raise 的 HTTPException"""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "detail": exc.detail,
-            "error_code": f"ERR_{exc.status_code}", # 產生統一代碼
-            "message": "請求處理失敗"
-        },
-    )
+# =======================
+# Rate-limit 設定
+# 功能檔案: app/infrastructure/rate_limit/limiter.py
+app.state.limiter = limiter
+app.add_exception_handler(Exception, rate_limit_exceeded_handler)
 
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """捕捉 FastAPI 自動生成的 Pydantic 資料驗證錯誤 (如 Email 格式不符)"""
-    # 提取錯誤欄位與原因
-    errors = exc.errors()
-    error_msg = f"資料格式錯誤: {errors[0]['msg']} (欄位: {errors[0]['loc'][-1]})"
-    
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={
-            "detail": error_msg,
-            "error_code": "VALIDATION_ERROR",
-            "message": "輸入資料驗證失敗"
-        },
-    )
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """捕捉所有未知的程式錯誤 (避免噴出 raw traceback)"""
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "detail": "伺服器發生未預期的錯誤，請聯繫管理員",
-            "error_code": "INTERNAL_SERVER_ERROR",
-            "message": str(exc) if settings.DEBUG else "Internal Server Error"
-        },
-    )
+# =======================
+# 註冊全域異常處理器
+# 功能檔案: app/core/handlers.py
+register_exception_handlers(app)
 
-# --- 2. 配置 CORS ---
 
-origins = [
-    settings.FRONTEND_URL,      # http://localhost:5173
-    "http://127.0.0.1:5173",
-]
+# =======================
+# 註冊 CORS
+# 功能檔案: app/core/cors.py
+register_cors(app)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-# --- 3. 匯入路由 ---
-app.include_router(user.router, prefix="/api/v1/users", tags=["使用者管理 (Users)"])
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["認證管理 (Auth)"])
-app.include_router(note.router, prefix="/api/v1/notes", tags=["筆記管理 (Notes)"])
+# =======================
+# 註冊路由
+# 功能檔案: app/api/v1/router.py
+app.include_router(api_router, prefix="/api/v1")
 
+
+# =======================
+# 系統測試路由 (可保留在 main.py)
 @app.get("/", tags=["系統測試"])
 async def root():
-    return {"message": "Kai Studio API 運行中"}
+    return {"message": f"{settings.PROJECT_NAME} API 運行中"}
+
 
 @app.get("/health-check", tags=["系統測試"])
 async def health_check():

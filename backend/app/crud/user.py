@@ -1,14 +1,14 @@
 # backend/app/crud/user.py
 from datetime import datetime, timezone
-import secrets
 from typing import Any, Optional
-from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+
 from .. import models
 from ..schemas.user import UserCreate
-from ..core.security import get_password_hash
+from ..core.security import get_password_hash, verify_email_verification_token
+from ..core import security # 為了使用 security.py 中的新函式
 
 # 1. 透過 Email 查詢使用者 (包含權限預載)
 async def get_user_by_email(db: AsyncSession, email: str):
@@ -28,15 +28,17 @@ async def get_user_by_id(db: AsyncSession, user_id: int):
     )
     return result.scalars().first()
 
-# 3. 建立使用者與權限
-async def create_user(db: AsyncSession, user: UserCreate):
+# 3. 建立使用者與權限 (已更新)
+async def create_user(db: AsyncSession, user: UserCreate) -> models.User:
+    """
+    建立使用者並設定初始權限，不再處理 verification token。
+    """
     hashed_password = get_password_hash(user.password)
-    v_token = secrets.token_urlsafe(32)
     
+    # 不再產生和儲存 token
     db_user = models.User(
         email=user.email,
         password_hash=hashed_password,
-        verification_token=v_token
     )
     db.add(db_user)
     await db.flush() 
@@ -50,21 +52,31 @@ async def create_user(db: AsyncSession, user: UserCreate):
     
     await db.commit()
     
-    # 重要：commit 後重新抓取，確保 permissions 被 selectinload 進來，避免回傳 Schema 時噴錯
-    return await get_user_by_email(db, user.email)
+    # 重新查詢以確保關聯資料被載入
+    created_user = await get_user_by_id(db, db_user.id)
+    if not created_user:
+        raise Exception("Could not retrieve user after creation.") # 理論上不應該發生
+    return created_user
 
-# 4. 驗證 Token
-async def verify_user_token(db: AsyncSession, token: str):
-    result = await db.execute(select(models.User).filter(models.User.verification_token == token))
-    user = result.scalars().first()
+# 4. 驗證 Token (已更新為 JWT 邏輯)
+async def verify_user_by_token(db: AsyncSession, token: str) -> Optional[models.User]:
+    """
+    驗證 JWT Token，如果有效，則啟用使用者。
+    """
+    email = security.verify_email_verification_token(token)
+    if not email:
+        return None # Token 無效或過期
     
-    if user:
+    user = await get_user_by_email(db, email)
+    if not user:
+        return None # 找不到對應使用者
+
+    if not user.is_active:
         user.is_active = True
-        user.verification_token = None
         await db.commit()
         await db.refresh(user)
-        return user
-    return None
+    
+    return user
 
 # 5. 紀錄裝置登入
 async def record_device_login(db: AsyncSession, user_id: int, device_id: str, ip: str, device_name: str):

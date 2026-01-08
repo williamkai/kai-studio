@@ -1,28 +1,37 @@
 // src/pages/VerifyEmail.jsx
 import userService from '@/features/users/api/userService';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function VerifyEmail() {
-    const [searchParams] = useSearchParams();
     const [status, setStatus] = useState('verifying'); // verifying | success | error
     const navigate = useNavigate();
-    const token = searchParams.get('token');
 
-    // 關鍵：使用 useRef 防止 React StrictMode 觸發兩次 API 請求
+    // 防止 React StrictMode 重複呼叫 API
     const initialized = useRef(false);
 
     useEffect(() => {
         if (initialized.current) return;
 
+        // --- 解析 URL 中的 token ---
+        let token = null;
+        try {
+            const url = window.location.href;
+            const decodedUrl = decodeURIComponent(url); // 先解碼
+            const match = decodedUrl.match(/token=([^/&]+)/); // 抓 token
+            if (match) token = match[1];
+        } catch (err) {
+            console.error('解析 token 失敗', err);
+        }
+
+        if (!token) {
+            setStatus('error');
+            return;
+        }
+
+        initialized.current = true;
+
         const handleVerify = async () => {
-            if (!token) {
-                setStatus('error');
-                return;
-            }
-
-            initialized.current = true;
-
             try {
                 // 呼叫後端驗證 API
                 await userService.verifyEmail(token);
@@ -42,7 +51,7 @@ export default function VerifyEmail() {
         };
 
         handleVerify();
-    }, [token, navigate]);
+    }, [navigate]);
 
     return (
         <div className="max-w-md mx-auto mt-20 p-8 md:p-12 app-card rounded-[2.5rem] shadow-2xl border app-border text-center">

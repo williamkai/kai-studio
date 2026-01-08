@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from ....database import get_db
+from ....infrastructure.database.database import get_db
 from ....schemas.note import NoteCreate, NoteOut
 from ....crud import note as note_crud
 from ..deps import get_current_user

@@ -1,29 +1,60 @@
 // src/pages/Register.jsx
 import userService from '@/features/users/api/userService';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Turnstile } from 'react-turnstile'; // Import Turnstile
 
 export default function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isRegistered, setIsRegistered] = useState(false); // 新增：控制是否顯示成功介面
+    const [isRegistered, setIsRegistered] = useState(false);
     const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
+    const [turnstileToken, setTurnstileToken] = useState(''); // New: Turnstile token state
     const navigate = useNavigate();
+
+    // Password validation state
+    const [passwordValidation, setPasswordValidation] = useState({
+        minLength: false,
+        lowercase: false,
+        uppercase: false,
+        digit: false,
+        specialChar: false,
+    });
+
+    // Function to validate password against rules (mirroring backend)
+    const validatePassword = (currentPassword) => {
+        setPasswordValidation({
+            minLength: currentPassword.length >= 8,
+            lowercase: /[a-z]/.test(currentPassword),
+            uppercase: /[A-Z]/.test(currentPassword),
+            digit: /[0-9]/.test(currentPassword),
+            specialChar: /[@$!%*?&#]/.test(currentPassword),
+        });
+    };
+
+    // Run validation whenever password changes
+    useEffect(() => {
+        validatePassword(password);
+    }, [password]);
+
 
     const inputStyles = `w-full p-4 rounded-2xl bg-[var(--bg-page)] border-2 border-transparent text-[var(--text-primary)] outline-none transition-all focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10`;
     const labelStyles = "block text-sm font-bold ml-1 text-[var(--text-primary)]";
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!email || !password) return setStatusMsg({ type: 'error', text: '請完整填寫欄位' });
+
+        if (!email || !password || !turnstileToken) { // Validate turnstileToken
+            setStatusMsg({ type: 'error', text: '請完整填寫欄位或完成機器人驗證。' });
+            return;
+        }
 
         setIsSubmitting(true);
         setStatusMsg({ type: '', text: '' });
 
         try {
-            await userService.register({ email, password });
-            // 關鍵：註冊成功，切換狀態，不導覽
+            await userService.register({ email, password, turnstileToken }); // Pass turnstileToken to backend
             setIsRegistered(true);
         } catch (error) {
             const errorDetail = error.response?.data?.detail || '註冊失敗，請稍後再試。';
@@ -96,10 +127,33 @@ export default function Register() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                     />
+                    {/* Password Validation Feedback */}
+                    <ul className="text-sm text-[var(--text-secondary)] space-y-1 mt-2">
+                        <li className={`flex items-center ${passwordValidation.minLength ? 'text-green-500' : 'text-red-500'}`}>
+                            {passwordValidation.minLength ? '✅' : '❌'} 至少 8 個字元
+                        </li>
+                        <li className={`flex items-center ${passwordValidation.lowercase ? 'text-green-500' : 'text-red-500'}`}>
+                            {passwordValidation.lowercase ? '✅' : '❌'} 包含一個小寫字母
+                        </li>
+                        <li className={`flex items-center ${passwordValidation.uppercase ? 'text-green-500' : 'text-red-500'}`}>
+                            {passwordValidation.uppercase ? '✅' : '❌'} 包含一個大寫字母
+                        </li>
+                        <li className={`flex items-center ${passwordValidation.digit ? 'text-green-500' : 'text-red-500'}`}>
+                            {passwordValidation.digit ? '✅' : '❌'} 包含一個數字
+                        </li>
+                        <li className={`flex items-center ${passwordValidation.specialChar ? 'text-green-500' : 'text-red-500'}`}>
+                            {passwordValidation.specialChar ? '✅' : '❌'} 包含一個特殊字元 (@$!%*?&#)
+                        </li>
+                    </ul>
+                </div>
+
+                {/* Cloudflare Turnstile Widget */}
+                <div className="mt-6">
+                    <Turnstile sitekey="YOUR_TURNSTILE_SITE_KEY" onVerify={setTurnstileToken} />
                 </div>
 
                 <button
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !turnstileToken}
                     className="w-full py-4 mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
                     {isSubmitting ? '處理中...' : '立即註冊'}

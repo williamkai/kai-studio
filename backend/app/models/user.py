@@ -3,7 +3,7 @@ from sqlalchemy import String, Boolean, ForeignKey, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
-from ..database import Base
+from ..infrastructure.database.database import Base
 
 # 1. 解決循環引用：只有在型別檢查時才匯入 Note
 if TYPE_CHECKING:
@@ -31,8 +31,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
-    verification_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # 一對一關聯權限表 (uselist=False)

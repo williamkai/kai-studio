@@ -4,11 +4,11 @@ from user_agents import parse
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Body, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from ....database import get_db
+from ....infrastructure.database.database import get_db
 from ....crud import user as user_crud
 from ....core import security
 from ....core.config import settings
-from ....core.redis import redis_client
+from ....infrastructure.cache.redis import redis_client
 from .... import schemas
 
 router = APIRouter()

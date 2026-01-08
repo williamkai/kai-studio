@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database import get_db
+from ...infrastructure.database.database import get_db
 from ...core.config import settings
 from ...crud import user as user_crud
 

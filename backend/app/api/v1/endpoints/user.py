@@ -1,98 +1,100 @@
-# backend/app/api/v1/endpoints/user.py
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from ....database import get_db
+from ....infrastructure.database.database import get_db
 from .... import schemas
-from ....crud import user as user_crud
-from ....services.email import send_verification_email
+from ....application.services import user as user_service
+from ....infrastructure.rate_limit.limiter import limiter
+from ..examples.user_examples import (
+    register_user_example,
+    verify_email_example,
+    resend_verification_example,
+    error_email_exists_example,
+    error_rate_limit_example,
+    error_invalid_token_example,
+    user_out_example
+)
+
+# 然後在 responses 或 content 的 example 直接用這些變數
+from ..descriptions.user_description import (
+    register_user_description,
+    verify_email_description,
+    resend_verification_description
+)
 
 router = APIRouter()
 
 @router.post(
-    "", 
+    "",
     response_model=schemas.UserOut,
     status_code=status.HTTP_201_CREATED,
-    summary="🚀 註冊新使用者",
-    description="""
-### 建立新帳號流程說明
-本端點會執行以下自動化流程：
-1. **資料驗證**：檢查 Email 格式與密碼強度。
-2. **查重**：確認資料庫中無重複 Email。
-3. **加密**：使用 bcrypt 對密碼進行安全雜湊。
-4. **非同步郵件**：註冊完成後，系統會透過 Background Tasks 自動發送驗證郵件，不會延遲回應時間。
-
----
-> **注意**：註冊後 `is_active` 預設為 `false`，必須通過 `/verify` 驗證後方可登入。
-""",
+    summary="🚀 註冊新使用者 (POST)",
+    description=register_user_description,
     responses={
-        201: {"description": "使用者建立成功"},
-        400: {
-            "model": schemas.ErrorResponse, 
-            "description": "用戶請求錯誤 (如 Email 重複)",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "EMAIL_ALREADY_EXISTS", "error_code": "USER_001"}
-                }
-            }
-        },
-        500: {"model": schemas.ErrorResponse, "description": "伺服器內部錯誤"}
+        201: {"description": "使用者建立成功，並已發送驗證郵件",
+              "content": {"application/json": {"example": register_user_example}}},
+        400: {"description": "Email 已存在或資料驗證失敗",
+              "content": {"application/json": {"example": error_email_exists_example}}},
+        429: {"description": "請求頻率過高",
+              "content": {"application/json": {"example": error_rate_limit_example}}},
     }
 )
+@limiter.limit("5/minute")
 async def register(
-    user: schemas.UserCreate, 
-    background_tasks: BackgroundTasks, 
+    request: Request,
+    user: schemas.UserCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
-    # 1. 檢查 Email (先查重)
-    db_user = await user_crud.get_user_by_email(db, user.email)
-    if db_user:
-        # 專業做法：在 detail 傳入更細緻的代碼
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="EMAIL_ALREADY_EXISTS"
-        )
-    
-    # 2. 建立新使用者
-    new_user = await user_crud.create_user(db, user)
-    
-    if not new_user:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="DATABASE_WRITE_ERROR"
-        )
-    
-    # 3. 寄出驗證郵件
-    background_tasks.add_task(
-        send_verification_email, 
-        email=str(new_user.email), 
-        token=str(new_user.verification_token)
-    )
-    
+    new_user, error = await user_service.register_user(user, db, background_tasks)
+    if error == "EMAIL_ALREADY_EXISTS":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="EMAIL_ALREADY_EXISTS")
+    if error == "DATABASE_WRITE_ERROR":
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="DATABASE_WRITE_ERROR")
     return new_user
 
+
 @router.get(
-    "/verify", 
-    summary="📧 驗證電子郵件",
+    "/verify",
     response_model=schemas.MessageResponse,
-    description="驗證使用者在郵件中點擊的 Token。成功後將開啟帳號登入權限。",
+    summary="📧 驗證電子郵件 (GET)",
+    description=verify_email_description,
     responses={
-        200: {"description": "驗證成功"},
-        400: {
-            "model": schemas.ErrorResponse, 
-            "description": "Token 無效或過期",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "INVALID_OR_EXPIRED_TOKEN", "error_code": "AUTH_001"}
-                }
-            }
-        }
+        200: {"description": "電子郵件驗證成功",
+              "content": {"application/json": {"example": verify_email_example}}},
+        400: {"description": "Token 無效或過期",
+              "content": {"application/json": {"example": error_invalid_token_example}}},
+    },
+)
+async def verify_email(
+    request: Request,
+    token: str,
+    db: AsyncSession = Depends(get_db)
+):
+    user = await user_service.verify_user_email(token, db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="INVALID_OR_EXPIRED_TOKEN")
+    return {"message": "VERIFICATION_SUCCESS"}
+
+
+@router.post(
+    "/resend-verification",
+    response_model=schemas.MessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="📬 重新發送驗證郵件 (POST)",
+    description=resend_verification_description,
+    responses={
+        200: {"description": "重新發送驗證郵件請求已處理",
+              "content": {"application/json": {"example": resend_verification_example}}},
+        429: {"description": "請求頻率過高",
+              "content": {"example": error_rate_limit_example}},
     }
 )
-async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
-    user = await user_crud.verify_user_token(db, token)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="INVALID_OR_EXPIRED_TOKEN"
-        )
-    return {"message": "VERIFICATION_SUCCESS"}
+@limiter.limit("3/minute")
+async def resend_verification_email(
+    request: Request,
+    req_body: schemas.ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    message = await user_service.resend_verification_email(req_body.email, db, background_tasks)
+    return {"message": message}
